@@ -344,6 +344,8 @@ volumes:
   data-zk-data-2:
   data-zk-data-3:
   data-kafka-1:
+  data-kafka-2:
+  data-kafka-3:
 
 
 networks:
