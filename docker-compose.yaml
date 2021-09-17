@@ -90,7 +90,6 @@ services:
       - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
-        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_DELETE_TOPIC_ENABLE=true
@@ -128,7 +127,6 @@ services:
       - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
-        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_DELETE_TOPIC_ENABLE=true
@@ -166,7 +164,6 @@ services:
       - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
-        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
       - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
       - KAFKA_DELETE_TOPIC_ENABLE=true
