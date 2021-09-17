@@ -1,0 +1,354 @@
+version: '3.7'
+services:
+
+# Confluent kafka stack
+  zk-1:
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION}
+    hostname: zk-1
+    container_name: zk-1
+    restart: on-failure
+    volumes:
+      - data-zk-log-1:/var/lib/zookeeper/log
+      - data-zk-data-1:/var/lib/zookeeper/data
+    networks:
+      - elastic
+    environment:
+      - ZOOKEEPER_SERVER_ID=1
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ZOOKEEPER_INIT_LIMIT=5
+      - ZOOKEEPER_SYNC_LIMIT=2
+      - ZOOKEEPER_SERVERS=zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
+      - KAFKA_OPTS=-Xms128m -Xmx128m
+
+  zk-2:
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION}
+    hostname: zk-2
+    container_name: zk-2
+    restart: on-failure
+    volumes:
+      - data-zk-log-2:/var/lib/zookeeper/log
+      - data-zk-data-2:/var/lib/zookeeper/data
+    networks:
+      - elastic
+    environment:
+      - ZOOKEEPER_SERVER_ID=2
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ZOOKEEPER_INIT_LIMIT=5
+      - ZOOKEEPER_SYNC_LIMIT=2
+      - ZOOKEEPER_SERVERS=zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
+      - KAFKA_OPTS=-Xms128m -Xmx128m
+
+  zk-3:
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION}
+    hostname: zk-3
+    container_name: zk-3
+    restart: on-failure
+    volumes:
+      - data-zk-log-3:/var/lib/zookeeper/log
+      - data-zk-data-3:/var/lib/zookeeper/data
+    networks:
+      - elastic
+    environment:
+      - ZOOKEEPER_SERVER_ID=3
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+      - ZOOKEEPER_INIT_LIMIT=5
+      - ZOOKEEPER_SYNC_LIMIT=2
+      - ZOOKEEPER_SERVERS=zk-1:2888:3888;zk-2:2888:3888;zk-3:2888:3888
+      - KAFKA_OPTS=-Xms128m -Xmx128m
+      
+  # create-admin-user:
+  #   image: "ianitrix/kafka:${CONFLUENT_VERSION}"
+  #   depends_on:
+  #     - zk-1
+  #   entrypoint: "kafka-configs --zookeeper zk-1:2181 --alter --add-config SCRAM-SHA-512='[password=admin-secret]' --entity-type users --entity-name admin"
+  #   restart: on-failure
+  #   networks:
+  #     - elastic
+
+  kafka-1:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    hostname: kafka-1
+    container_name: kafka-1
+    restart: on-failure
+    networks:
+      - elastic
+    depends_on:
+      - zk-1
+      - zk-2
+      - zk-3
+    volumes:
+      - data-kafka-1:/var/lib/kafka/data
+    environment:
+      - KAFKA_BROKER_ID=101
+      - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
+      - KAFKA_ADVERTISED_LISTENERS=SECURE://kafka-1:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=SECURE:SASL_PLAINTEXT
+      - KAFKA_LISTENERS=SECURE://:9092
+      - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
+      - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
+      - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
+        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
+      - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_DELETE_TOPIC_ENABLE=true
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_OPTS=-Xms256m -Xmx256m
+      - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
+      - KAFKA_SUPER_USERS=User:admin
+    healthcheck:
+      test: nc -z localhost 9092
+      interval: 2s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  kafka-2:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    hostname: kafka-2
+    container_name: kafka-2
+    restart: on-failure
+    networks:
+      - elastic
+    depends_on:
+      - zk-1
+      - zk-2
+      - zk-3
+    volumes:
+      - data-kafka-2:/var/lib/kafka/data
+    environment:
+      - KAFKA_BROKER_ID=102
+      - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
+      - KAFKA_ADVERTISED_LISTENERS=SECURE://kafka-2:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=SECURE:SASL_PLAINTEXT
+      - KAFKA_LISTENERS=SECURE://:9092
+      - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
+      - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
+      - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
+        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
+      - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_DELETE_TOPIC_ENABLE=true
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_OPTS=-Xms256m -Xmx256m
+      - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
+      - KAFKA_SUPER_USERS=User:admin
+    healthcheck:
+      test: nc -z localhost 9092
+      interval: 2s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  kafka-3:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    hostname: kafka-3
+    container_name: kafka-3
+    restart: on-failure
+    networks:
+      - elastic
+    depends_on:
+      - zk-1
+      - zk-2
+      - zk-3
+    volumes:
+      - data-kafka-1:/var/lib/kafka/data
+    environment:
+      - KAFKA_BROKER_ID=103
+      - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
+      - KAFKA_ADVERTISED_LISTENERS=SECURE://kafka-3:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=SECURE:SASL_PLAINTEXT
+      - KAFKA_LISTENERS=SECURE://:9092
+      - KAFKA_SASL_ENABLED_MECHANISMS=SCRAM-SHA-512
+      - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
+      - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
+        listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config
+      - "KAFKA_LISTENER_NAME_SECURE_SCRAM__sha__512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_DELETE_TOPIC_ENABLE=true
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_OPTS=-Xms256m -Xmx256m
+      - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
+      - KAFKA_SUPER_USERS=User:admin
+    healthcheck:
+      test: nc -z localhost 9092
+      interval: 2s
+      timeout: 2s
+      retries: 3
+      start_period: 2s
+
+  kafka-connect:
+    image: "ianitrix/kafka:${CONFLUENT_VERSION}"
+    command: connect-distributed
+    hostname: kafka-connect
+    ports:
+      - 8083:8083
+    networks:
+      - elastic
+    depends_on:
+      - kafka-1
+    healthcheck:
+      test: test `curl -s -o /dev/null -w "%{http_code}" http://localhost:8083/connectors` = 200
+      interval: 2s
+      timeout: 2s
+      retries: 10
+      start_period: 2s
+    environment:
+      - KAFKA_OPTS=-javaagent:/opentelemetry-javaagent-all.jar -Xms512m -Xmx512m
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=connect,service.version=1.1,deployment.environment=production
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${EXPORTER}
+      - KAFKA_bootstrap_servers=kafka-1:9092
+      - KAFKA_security_protocol=SASL_PLAINTEXT
+      - KAFKA_sasl_mechanism=SCRAM-SHA-512
+      - "KAFKA_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+      - KAFKA_consumer_sasl_mechanism=SCRAM-SHA-512
+      - KAFKA_producer_sasl_mechanism=SCRAM-SHA-512
+      - KAFKA_consumer_security_protocol=SASL_PLAINTEXT
+      - KAFKA_producer_security_protocol=SASL_PLAINTEXT
+      - KAFKA_rest_port=8083
+      - KAFKA_group_id=connect
+      - KAFKA_config_storage_topic=_connect-config
+      - KAFKA_offset_storage_topic=_connect-offsets
+      - KAFKA_status_storage_topic=_connect-status
+      - KAFKA_replication_factor=1
+      - KAFKA_config_storage_replication_factor=1
+      - KAFKA_offset_storage_replication_factor=1
+      - KAFKA_status_storage_replication_factor=1
+      - KAFKA_key_converter=org.apache.kafka.connect.json.JsonConverter
+      - KAFKA_value_converter=org.apache.kafka.connect.json.JsonConverter
+      - KAFKA_key_converter_schemas_enable=false
+      - KAFKA_value_converter_schemas_enable=false
+      - KAFKA_internal_key_converter=org.apache.kafka.connect.json.JsonConverter
+      - KAFKA_internal_value_converter=org.apache.kafka.connect.json.JsonConverter
+      - KAFKA_rest_advertised_host_name=kafka-connect
+      - KAFKA_plugin_path=/confluent-${CONFLUENT_VERSION}/share/java
+      - KAFKA_log4j_root_loglevel=INFO
+      - KAFKA_log4j_loggers=org.reflections=ERROR
+      - KAFKA_connector_client_config_override_policy=All
+    restart: on-failure  
+    volumes:
+      - ./opentelemetry-javaagent-all.jar:/opentelemetry-javaagent-all.jar:ro
+
+  akhq:
+    image: tchiotludo/akhq:0.16.0
+    environment:
+     OTEL_RESOURCE_ATTRIBUTES: "service.name=akhq,service.version=1.1,deployment.environment=production"
+     OTEL_EXPORTER_OTLP_ENDPOINT: "${EXPORTER}"
+     JAVA_OPTS: "-javaagent:/opentelemetry-javaagent-all.jar -Xms256m -Xmx256m" 
+     AKHQ_CONFIGURATION: |
+        micronaut:
+         server:
+           cors:
+             enabled: true
+        akhq:
+          connections:
+            docker-kafka-server:
+              properties:
+                bootstrap.servers: "kafka-1:9092"
+                security.protocol: SASL_PLAINTEXT
+                sasl.mechanism: SCRAM-SHA-512
+                sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="admin" password="admin-secret";
+              schema-registry:
+                url: "http://schema-registry:8081"
+              connect:
+                - name: connect
+                  url: "http://kafka-connect:8083"
+    ports:
+    - 8080:8080
+    networks:
+    - elastic
+    volumes:
+      - ./opentelemetry-javaagent-all.jar:/opentelemetry-javaagent-all.jar:ro
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION}
+    environment:
+    - bootstrap.memory_lock=true
+    - cluster.name=docker-cluster
+    - cluster.routing.allocation.disk.threshold_enabled=false
+    - discovery.type=single-node
+    - ES_JAVA_OPTS=-XX:UseAVX=2 -Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    volumes:
+    - esdata:/usr/share/elasticsearch/data
+    ports:
+    - 9200:9200
+    networks:
+    - elastic
+    healthcheck:
+      interval: 20s
+      retries: 10
+      test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELASTICSEARCH_VERSION}
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+    - 5601:5601
+    networks:
+    - elastic
+    healthcheck:
+      interval: 10s
+      retries: 20
+      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:${ELASTICSEARCH_VERSION}
+    user: root
+    networks:
+      - elastic
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - KIBANA_HOST=kibana
+    command: ["--strict.perms=false"]
+    restart: on-failure
+    
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION}
+    volumes:
+      - ./config/prometheus.yml:/prometheus.yml:ro
+    command:
+      - '--config.file=/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: on-failure
+    ports:
+     - "9090:9090"
+    networks:
+      - elastic
+
+volumes:
+  esdata:
+    driver: local
+  data-zk-log-1:
+  data-zk-log-2:
+  data-zk-log-3:
+  data-zk-data-1:
+  data-zk-data-2:
+  data-zk-data-3:
+  data-kafka-1:
+
+
+networks:
+  elastic:
+    driver: bridge
