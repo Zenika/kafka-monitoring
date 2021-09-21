@@ -154,7 +154,7 @@ services:
       - zk-2
       - zk-3
     volumes:
-      - data-kafka-1:/var/lib/kafka/data
+      - data-kafka-3:/var/lib/kafka/data
     environment:
       - KAFKA_BROKER_ID=103
       - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
