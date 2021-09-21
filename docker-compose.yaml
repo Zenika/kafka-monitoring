@@ -61,6 +61,7 @@ services:
       
   create-admin-user:
     image: "ianitrix/kafka:${CONFLUENT_VERSION}"
+    container_name: create-admin-user
     depends_on:
       - zk-1
     entrypoint: "kafka-configs --zookeeper zk-1:2181 --alter --add-config SCRAM-SHA-512='[password=admin-secret]' --entity-type users --entity-name admin"
@@ -179,10 +180,10 @@ services:
       retries: 3
       start_period: 2s
 
-  kafka-connect:
-    image: "ianitrix/kafka:${CONFLUENT_VERSION}"
-    command: connect-distributed
-    hostname: kafka-connect
+  kafka-connect-1:
+    image: "confluentinc/cp-kafka-connect:${CONFLUENT_VERSION}"
+    hostname: kafka-connect-1
+    container_name: kafka-connect-1
     ports:
       - 8083:8083
     networks:
@@ -196,47 +197,34 @@ services:
       retries: 10
       start_period: 2s
     environment:
-      - KAFKA_OPTS=-javaagent:/opentelemetry-javaagent-all.jar -Xms512m -Xmx512m
-      - OTEL_RESOURCE_ATTRIBUTES=service.name=connect,service.version=1.1,deployment.environment=production
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${EXPORTER}
-      - KAFKA_bootstrap_servers=kafka-1:9092
-      - KAFKA_security_protocol=SASL_PLAINTEXT
-      - KAFKA_sasl_mechanism=SCRAM-SHA-512
-      - "KAFKA_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
-      - KAFKA_consumer_sasl_mechanism=SCRAM-SHA-512
-      - KAFKA_producer_sasl_mechanism=SCRAM-SHA-512
-      - KAFKA_consumer_security_protocol=SASL_PLAINTEXT
-      - KAFKA_producer_security_protocol=SASL_PLAINTEXT
-      - KAFKA_rest_port=8083
-      - KAFKA_group_id=connect
-      - KAFKA_config_storage_topic=_connect-config
-      - KAFKA_offset_storage_topic=_connect-offsets
-      - KAFKA_status_storage_topic=_connect-status
-      - KAFKA_replication_factor=1
-      - KAFKA_config_storage_replication_factor=1
-      - KAFKA_offset_storage_replication_factor=1
-      - KAFKA_status_storage_replication_factor=1
-      - KAFKA_key_converter=org.apache.kafka.connect.json.JsonConverter
-      - KAFKA_value_converter=org.apache.kafka.connect.json.JsonConverter
-      - KAFKA_key_converter_schemas_enable=false
-      - KAFKA_value_converter_schemas_enable=false
-      - KAFKA_internal_key_converter=org.apache.kafka.connect.json.JsonConverter
-      - KAFKA_internal_value_converter=org.apache.kafka.connect.json.JsonConverter
-      - KAFKA_rest_advertised_host_name=kafka-connect
-      - KAFKA_plugin_path=/confluent-${CONFLUENT_VERSION}/share/java
-      - KAFKA_log4j_root_loglevel=INFO
-      - KAFKA_log4j_loggers=org.reflections=ERROR
-      - KAFKA_connector_client_config_override_policy=All
-    restart: on-failure  
-    volumes:
-      - ./opentelemetry-javaagent-all.jar:/opentelemetry-javaagent-all.jar:ro
+      - CONNECT_BOOTSTRAP_SERVERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - CONNECT_SECURITY_PROTOCOL=SASL_PLAINTEXT
+      - CONNECT_SASL_MECHANISM=SCRAM-SHA-512
+      - "CONNECT_SASL_JAAS_CONFIG=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+      - CONNECT_CONSUMER_SASL_MECHANISM=SCRAM-SHA-512
+      - CONNECT_PRODUCER_SASL_MECHANISM=SCRAM-SHA-512
+      - CONNECT_CONSUMER_SECURITY_PROTOCOL=SASL_PLAINTEXT
+      - CONNECT_PRODUCER_SECURITY_PROTOCOL=SASL_PLAINTEXT
+      - CONNECT_REST_PORT=8083
+      - CONNECT_GROUP_ID=connect
+      - CONNECT_CONFIG_STORAGE_TOPIC=_connect-config
+      - CONNECT_OFFSET_STORAGE_TOPIC=_connect-offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=_connect-status
+      - CONNECT_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect-1
+      - CONNECT_PLUGIN_PATH=/confluent-${CONFLUENT_VERSION}/share/java
+      - CONNECT_CONNECTOR_CLIENT_CONFIG_OVERRIDE_POLICY=All
+    restart: on-failure
 
   akhq:
     image: tchiotludo/akhq:0.16.0
+    container_name: akhq
     environment:
-     OTEL_RESOURCE_ATTRIBUTES: "service.name=akhq,service.version=1.1,deployment.environment=production"
-     OTEL_EXPORTER_OTLP_ENDPOINT: "${EXPORTER}"
-     JAVA_OPTS: "-javaagent:/opentelemetry-javaagent-all.jar -Xms256m -Xmx256m" 
      AKHQ_CONFIGURATION: |
         micronaut:
          server:
@@ -246,21 +234,17 @@ services:
           connections:
             docker-kafka-server:
               properties:
-                bootstrap.servers: "kafka-1:9092"
+                bootstrap.servers: "kafka-1:9092,kafka-2:9092,kafka-3:9092"
                 security.protocol: SASL_PLAINTEXT
                 sasl.mechanism: SCRAM-SHA-512
                 sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="admin" password="admin-secret";
-              schema-registry:
-                url: "http://schema-registry:8081"
               connect:
                 - name: connect
-                  url: "http://kafka-connect:8083"
+                  url: "http://kafka-connect-1:8083"
     ports:
-    - 8080:8080
+    - 8085:8080
     networks:
     - elastic
-    volumes:
-      - ./opentelemetry-javaagent-all.jar:/opentelemetry-javaagent-all.jar:ro
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION}
