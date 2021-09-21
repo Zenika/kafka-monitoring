@@ -221,6 +221,21 @@ services:
       - CONNECT_CONNECTOR_CLIENT_CONFIG_OVERRIDE_POLICY=All
     restart: on-failure
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION}
+    hostname: schema-registry
+    container_name: schema-registry
+    networks:
+      - elastic
+    environment:
+      - SCHEMA_REGISTRY_HOST_NAME=schema-registry
+      - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081
+      - SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL=SASL_PLAINTEXT
+      - SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM=SCRAM-SHA-512
+      - "SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
+
+
   akhq:
     image: tchiotludo/akhq:0.16.0
     container_name: akhq
@@ -238,6 +253,8 @@ services:
                 security.protocol: SASL_PLAINTEXT
                 sasl.mechanism: SCRAM-SHA-512
                 sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="admin" password="admin-secret";
+              schema-registry:
+                url: "http://schema-registry:8081"
               connect:
                 - name: connect
                   url: "http://kafka-connect-1:8083"
