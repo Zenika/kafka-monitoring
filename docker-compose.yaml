@@ -82,6 +82,8 @@ services:
       - zk-3
     volumes:
       - data-kafka-1:/var/lib/kafka/data
+      - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=101
       - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
@@ -99,6 +101,7 @@ services:
       - KAFKA_OPTS=-Xms256m -Xmx256m
       - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
       - KAFKA_SUPER_USERS=User:admin
+      - KAFKA_OPTS=-javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar=8080:/jmx-exporter/config.yaml
     healthcheck:
       test: nc -z localhost 9092
       interval: 2s
@@ -119,6 +122,8 @@ services:
       - zk-3
     volumes:
       - data-kafka-2:/var/lib/kafka/data
+      - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=102
       - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
@@ -136,6 +141,7 @@ services:
       - KAFKA_OPTS=-Xms256m -Xmx256m
       - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
       - KAFKA_SUPER_USERS=User:admin
+      - KAFKA_OPTS=-javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar=8080:/jmx-exporter/config.yaml
     healthcheck:
       test: nc -z localhost 9092
       interval: 2s
@@ -156,6 +162,8 @@ services:
       - zk-3
     volumes:
       - data-kafka-3:/var/lib/kafka/data
+      - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=103
       - KAFKA_ZOOKEEPER_CONNECT=zk-1:2181,zk-2:2181,zk-3:2181
@@ -173,6 +181,7 @@ services:
       - KAFKA_OPTS=-Xms256m -Xmx256m
       - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
       - KAFKA_SUPER_USERS=User:admin
+      - KAFKA_OPTS=-javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar=8080:/jmx-exporter/config.yaml
     healthcheck:
       test: nc -z localhost 9092
       interval: 2s
@@ -235,7 +244,6 @@ services:
       - SCHEMA_REGISTRY_KAFKASTORE_SASL_MECHANISM=SCRAM-SHA-512
       - "SCHEMA_REGISTRY_KAFKASTORE_SASL_JAAS_CONFIG=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
 
-
   akhq:
     image: tchiotludo/akhq:0.16.0
     container_name: akhq
@@ -263,63 +271,64 @@ services:
     networks:
     - elastic
 
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION}
-    environment:
-    - bootstrap.memory_lock=true
-    - cluster.name=docker-cluster
-    - cluster.routing.allocation.disk.threshold_enabled=false
-    - discovery.type=single-node
-    - ES_JAVA_OPTS=-XX:UseAVX=2 -Xms1g -Xmx1g
-    ulimits:
-      memlock:
-        hard: -1
-        soft: -1
-    volumes:
-    - esdata:/usr/share/elasticsearch/data
-    ports:
-    - 9200:9200
-    networks:
-    - elastic
-    healthcheck:
-      interval: 20s
-      retries: 10
-      test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION}
+  #   environment:
+  #   - bootstrap.memory_lock=true
+  #   - cluster.name=docker-cluster
+  #   - cluster.routing.allocation.disk.threshold_enabled=false
+  #   - discovery.type=single-node
+  #   - ES_JAVA_OPTS=-XX:UseAVX=2 -Xms1g -Xmx1g
+  #   ulimits:
+  #     memlock:
+  #       hard: -1
+  #       soft: -1
+  #   volumes:
+  #   - esdata:/usr/share/elasticsearch/data
+  #   ports:
+  #   - 9200:9200
+  #   networks:
+  #   - elastic
+  #   healthcheck:
+  #     interval: 20s
+  #     retries: 10
+  #     test: curl -s http://localhost:9200/_cluster/health | grep -vq '"status":"red"'
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:${ELASTICSEARCH_VERSION}
-    depends_on:
-      - elasticsearch
-    environment:
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports:
-    - 5601:5601
-    networks:
-    - elastic
-    healthcheck:
-      interval: 10s
-      retries: 20
-      test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:${ELASTICSEARCH_VERSION}
+  #   depends_on:
+  #     - elasticsearch
+  #   environment:
+  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   ports:
+  #   - 5601:5601
+  #   networks:
+  #   - elastic
+  #   healthcheck:
+  #     interval: 10s
+  #     retries: 20
+  #     test: curl --write-out 'HTTP %{http_code}' --fail --silent --output /dev/null http://localhost:5601/api/status
 
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:${ELASTICSEARCH_VERSION}
-    user: root
-    networks:
-      - elastic
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
-      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-    environment:
-      - ELASTICSEARCH_HOST=http://elasticsearch:9200
-      - KIBANA_HOST=kibana
-    command: ["--strict.perms=false"]
-    restart: on-failure
+  # filebeat:
+  #   image: docker.elastic.co/beats/filebeat:${ELASTICSEARCH_VERSION}
+  #   user: root
+  #   networks:
+  #     - elastic
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+  #     - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+  #   environment:
+  #     - ELASTICSEARCH_HOST=http://elasticsearch:9200
+  #     - KIBANA_HOST=kibana
+  #   command: ["--strict.perms=false"]
+  #   restart: on-failure
     
   # Prometheus
   prometheus:
     image: prom/prometheus:${PROMETHEUS_VERSION}
+    container_name: prometheus
     volumes:
       - ./config/prometheus.yml:/prometheus.yml:ro
     command:
@@ -332,6 +341,15 @@ services:
     restart: on-failure
     ports:
      - "9090:9090"
+    networks:
+      - elastic
+  
+  # Grafana
+  grafana:
+    image:  grafana/grafana:8.1.5
+    container_name: grafana
+    ports:
+      - "3000:3000"
     networks:
       - elastic
 
