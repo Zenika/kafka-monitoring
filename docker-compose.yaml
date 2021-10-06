@@ -80,9 +80,12 @@ services:
       - zk-1
       - zk-2
       - zk-3
+    ports:
+      - 9999:9999
     volumes:
       - data-kafka-1:/var/lib/kafka/data
       - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./config/kafka/client.properties:/client/client.properties
       - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=101
@@ -102,6 +105,9 @@ services:
       - KAFKA_AUTHORIZER_CLASS_NAME=kafka.security.authorizer.AclAuthorizer
       - KAFKA_SUPER_USERS=User:admin
       - KAFKA_OPTS=-javaagent:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar=8080:/jmx-exporter/config.yaml
+      - KAFKA_JMX_OPTS=-Djava.rmi.server.hostname=127.0.0.1 -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
+      - KAFKA_JMX_PORT=9999
+      - KAFKA_JMX_HOSTNAME=docker-desktop
     healthcheck:
       test: nc -z localhost 9092
       interval: 2s
@@ -123,6 +129,7 @@ services:
     volumes:
       - data-kafka-2:/var/lib/kafka/data
       - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./config/kafka/client.properties:/client/client.properties
       - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=102
@@ -163,6 +170,7 @@ services:
     volumes:
       - data-kafka-3:/var/lib/kafka/data
       - ./config/kafka/jmx-exporter-config.yaml:/jmx-exporter/config.yaml
+      - ./config/kafka/client.properties:/client/client.properties
       - ./lib/jmx_prometheus_javaagent-0.16.1.jar:/jmx-exporter/jmx_prometheus_javaagent-0.16.1.jar
     environment:
       - KAFKA_BROKER_ID=103
@@ -188,6 +196,32 @@ services:
       timeout: 2s
       retries: 3
       start_period: 2s
+
+  create-topic:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    container_name: create-topic
+    networks:
+      - elastic
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    volumes:
+      - ./config/kafka/client.properties:/client/client.properties
+    command: kafka-topics --bootstrap-server kafka-1:9092,kafka-2:9092,kafka-3:9092 --command-config /client/client.properties --create --topic perf --replication-factor 3 --partitions 3
+
+  producer-perf-test:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    container_name: producer-perf-test
+    networks:
+      - elastic
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+    volumes:
+      - ./config/kafka/client.properties:/client/client.properties
+    command: kafka-producer-perf-test --producer-props bootstrap.servers=kafka-1:9092,kafka-2:9092,kafka-3:9092 --producer.config /client/client.properties --topic perf --num-records 2000000 --record-size 1000 --throughput 1000000000
 
   kafka-connect-1:
     image: "confluentinc/cp-kafka-connect:${CONFLUENT_VERSION}"
@@ -330,6 +364,7 @@ services:
     image: prom/prometheus:${PROMETHEUS_VERSION}
     container_name: prometheus
     volumes:
+      - data-prometheus:/prometheus
       - ./config/prometheus.yml:/prometheus.yml:ro
     command:
       - '--config.file=/prometheus.yml'
@@ -338,16 +373,23 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
-    restart: on-failure
+    # no curl in prometheus docker image
+    # healthcheck:
+    #   interval: 5s
+    #   retries: 10
+    #   test: curl -s prometheus:9090/-/healthy | grep -iq 'healthy'
     ports:
      - "9090:9090"
+    #  - "9999:9999"
     networks:
       - elastic
   
   # Grafana
   grafana:
-    image:  grafana/grafana:8.1.5
+    image: grafana/grafana:8.1.5
     container_name: grafana
+    volumes:
+      - data-grafana:/var/lib/grafana
     ports:
       - "3000:3000"
     networks:
@@ -365,7 +407,8 @@ volumes:
   data-kafka-1:
   data-kafka-2:
   data-kafka-3:
-
+  data-prometheus:
+  data-grafana:
 
 networks:
   elastic:

@@ -1342,7 +1342,7 @@
             }
           }
         ],
-        "title": "Confluent Kafka",
+        "title": "Apache Kafka",
         "type": "row"
       },
       {
@@ -4406,7 +4406,7 @@
       ]
     },
     "timezone": "",
-    "title": "Confluent Platform Community",
+    "title": "Apache Kafka Cluster",
     "uid": "AEaSQ97mz",
     "version": 6
   }

@@ -2,32 +2,57 @@ lowercaseOutputName: true
 lowercaseOutputLabelNames: true
 
 whitelistObjectNames:
-  - kafka.server:type=ReplicaManager,name=*
-  - kafka.controller:type=KafkaController,name=*
+  - kafka.controller:type=KafkaController,name=ActiveControllerCount
+  - kafka.controller:type=KafkaController,name=OfflinePartitionsCount
+  - kafka.server:type=ReplicaManager,name=PartitionCount
+  - kafka.server:type=ReplicaManager,name=LeaderCount
+  - kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions
+  - kafka.cluster:type=Partition,name=ReplicasCount,topic=*,partition=*
+  - kafka.controller:type=ControllerStats,name=LeaderElectionRateAndTimeMs
+  - kafka.server:type=ReplicaManager,name=IsrExpandsPerSec
+  - kafka.server:type=ReplicaManager,name=IsrShrinksPerSec
+  - kafka.server:type=SessionExpireListener,name=ZooKeeperExpiresPerSec
+  - kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica
   - kafka.server:type=BrokerTopicMetrics,name=*
-  - kafka.network:type=RequestMetrics,name=RequestsPerSec,request=*
-  - kafka.network:type=SocketServer,name=NetworkProcessorAvgIdlePercent
-  - kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=*
-  - kafka.server:type=KafkaRequestHandlerPool,name=RequestHandlerAvgIdlePercent
-  - kafka.controller:type=ControllerStats,name=*
-  - kafka.server:type=SessionExpireListener,name=*
+  - kafka.server:type=BrokerTopicMetrics,name=*,topic=*
+  - kafka.network:type=RequestMetrics,name=RequestsPerSec,request=*,version=*
 
 rules:
-  - pattern : kafka.server<type=ReplicaManager, name=(.+)><>(Value|OneMinuteRate)
-    name: "cp_kafka_server_replicamanager_$1"
-  - pattern : kafka.controller<type=KafkaController, name=(.+)><>Value
-    name: "cp_kafka_controller_kafkacontroller_$1"
-  - pattern : kafka.server<type=BrokerTopicMetrics, name=(.+)><>OneMinuteRate
-    name: "cp_kafka_server_brokertopicmetrics_$1"
-  - pattern : kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+)><>OneMinuteRate
-    name: "cp_kafka_network_requestmetrics_requestspersec_$1"
-  - pattern : kafka.network<type=SocketServer, name=NetworkProcessorAvgIdlePercent><>Value
-    name: "cp_kafka_network_socketserver_networkprocessoravgidlepercent"
-  - pattern : kafka.server<type=ReplicaFetcherManager, name=MaxLag, clientId=(.+)><>Value
-    name: "cp_kafka_server_replicafetchermanager_maxlag_$1"
-  - pattern : kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>OneMinuteRate
-    name: "cp_kafka_kafkarequesthandlerpool_requesthandleravgidlepercent"
-  - pattern : kafka.controller<type=ControllerStats, name=(.+)><>OneMinuteRate
-    name: "cp_kafka_controller_controllerstats_$1"
-  - pattern : kafka.server<type=SessionExpireListener, name=(.+)><>OneMinuteRate
-    name: "cp_kafka_server_sessionexpirelistener_$1"
+  # Topology
+  - pattern: kafka.controller<type=KafkaController, name=ActiveControllerCount><>Value
+    name: "kafka_controller_kafkacontroller_activecontrollercount"
+  - pattern: kafka.controller<type=KafkaController, name=OfflinePartitionsCount><>Value
+    name: "kafka_controller_kafkacontroller_offlinepartitionscount"
+  - pattern: kafka.server<type=ReplicaManager, name=PartitionCount><>Value
+    name: "kafka_server_replicamanager_partitioncount"
+  - pattern: kafka.server<type=ReplicaManager, name=LeaderCount><>Value
+    name: "kafka_server_replicamanager_leadercount"
+  - pattern: kafka.server<type=ReplicaManager, name=UnderReplicatedPartitions><>Value
+    name: "kafka_server_replicamanager_underreplicatedpartitions"
+  - pattern: kafka.cluster<type=Partition, name=ReplicasCount, topic=(.+), partition=(.+)><>Value
+    name: "kafka_cluster_partition_replicascount"
+    labels:
+      topic: $1
+      partition: $2
+  - pattern: kafka.controller<type=ControllerStats, name=LeaderElectionRateAndTimeMs><>OneMinuteRate
+    name: "kafka_controller_controllerstats_leaderelectionrateandtimems_rate"
+  - pattern: kafka.server<type=ReplicaManager, name=IsrExpandsPerSec><>OneMinuteRate
+    name: "kafka_server_replicamanager_isrexpandspersec_rate"
+  - pattern: kafka.server<type=ReplicaManager, name=IsrShrinksPerSec><>OneMinuteRate
+    name: "kafka_server_replicamanager_isrshrinkspersec_rate"
+  - pattern: kafka.server<type=SessionExpireListener, name=ZooKeeperExpiresPerSec><>OneMinuteRate
+    name: "kafka_server_sessionexpirelistener_zookeeperexpirespersec_rate"
+  - pattern: kafka.server<type=ReplicaFetcherManager, name=MaxLag, clientId=Replica><>Value
+    name: "kafka_server_replicafetchermanager_maxlag"
+
+  # Activity
+  # - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)><>OneMinuteRate
+  #   name: kafka_server_brokertopicmetrics_$1_rate
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)?(, topic=(.+))><>OneMinuteRate
+    name: kafka_server_brokertopicmetrics_$1_rate
+    labels:
+      topic: $3
+  - pattern: kafka.network<type=RequestMetrics,name=RequestsPerSec,request=(.+),version=(.+)><>OneMinuteRate
+    name: kafka_network_requestmetrics_requestspersec_request_$1_rate
+    labels:
+      version: $2
