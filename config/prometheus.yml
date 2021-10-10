@@ -13,8 +13,12 @@ rule_files:
 
 # A scrape configuration containing exactly one endpoint to scrape.
 scrape_configs:
-  - job_name: 'otel'
+  - job_name: 'kafka'
     scrape_interval: 5s
     static_configs:
       - targets: ['kafka-1:8080','kafka-2:8080','kafka-3:8080']
 
+  - job_name: 'docker'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['container-exporter:9104']
