@@ -1,58 +1,104 @@
+---
 lowercaseOutputName: true
-lowercaseOutputLabelNames: true
-
-whitelistObjectNames:
-  - kafka.controller:type=KafkaController,name=ActiveControllerCount
-  - kafka.controller:type=KafkaController,name=OfflinePartitionsCount
-  - kafka.server:type=ReplicaManager,name=PartitionCount
-  - kafka.server:type=ReplicaManager,name=LeaderCount
-  - kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions
-  - kafka.cluster:type=Partition,name=ReplicasCount,topic=*,partition=*
-  - kafka.controller:type=ControllerStats,name=LeaderElectionRateAndTimeMs
-  - kafka.server:type=ReplicaManager,name=IsrExpandsPerSec
-  - kafka.server:type=ReplicaManager,name=IsrShrinksPerSec
-  - kafka.server:type=SessionExpireListener,name=ZooKeeperExpiresPerSec
-  - kafka.server:type=ReplicaFetcherManager,name=MaxLag,clientId=Replica
-  - kafka.server:type=BrokerTopicMetrics,name=*
-  - kafka.server:type=BrokerTopicMetrics,name=*,topic=*
-  - kafka.network:type=RequestMetrics,name=RequestsPerSec,request=*,version=*
-
 rules:
-  # Topology
-  - pattern: kafka.controller<type=KafkaController, name=ActiveControllerCount><>Value
-    name: "kafka_controller_kafkacontroller_activecontrollercount"
-  - pattern: kafka.controller<type=KafkaController, name=OfflinePartitionsCount><>Value
-    name: "kafka_controller_kafkacontroller_offlinepartitionscount"
-  - pattern: kafka.server<type=ReplicaManager, name=PartitionCount><>Value
-    name: "kafka_server_replicamanager_partitioncount"
-  - pattern: kafka.server<type=ReplicaManager, name=LeaderCount><>Value
-    name: "kafka_server_replicamanager_leadercount"
-  - pattern: kafka.server<type=ReplicaManager, name=UnderReplicatedPartitions><>Value
-    name: "kafka_server_replicamanager_underreplicatedpartitions"
-  - pattern: kafka.cluster<type=Partition, name=ReplicasCount, topic=(.+), partition=(.+)><>Value
-    name: "kafka_cluster_partition_replicascount"
-    labels:
-      topic: $1
-      partition: $2
-  - pattern: kafka.controller<type=ControllerStats, name=LeaderElectionRateAndTimeMs><>OneMinuteRate
-    name: "kafka_controller_controllerstats_leaderelectionrateandtimems_rate"
-  - pattern: kafka.server<type=ReplicaManager, name=IsrExpandsPerSec><>OneMinuteRate
-    name: "kafka_server_replicamanager_isrexpandspersec_rate"
-  - pattern: kafka.server<type=ReplicaManager, name=IsrShrinksPerSec><>OneMinuteRate
-    name: "kafka_server_replicamanager_isrshrinkspersec_rate"
-  - pattern: kafka.server<type=SessionExpireListener, name=ZooKeeperExpiresPerSec><>OneMinuteRate
-    name: "kafka_server_sessionexpirelistener_zookeeperexpirespersec_rate"
-  - pattern: kafka.server<type=ReplicaFetcherManager, name=MaxLag, clientId=Replica><>Value
-    name: "kafka_server_replicafetchermanager_maxlag"
+# Special cases and very specific rules
+- pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), topic=(.+), partition=(.*)><>Value
+  name: kafka_server_$1_$2
+  type: GAUGE
+  labels:
+    clientId: "$3"
+    topic: "$4"
+    partition: "$5"
+- pattern: kafka.server<type=(.+), name=(.+), clientId=(.+), brokerHost=(.+), brokerPort=(.+)><>Value
+  name: kafka_server_$1_$2
+  type: GAUGE
+  labels:
+    clientId: "$3"
+    broker: "$4:$5"
+- pattern: kafka.coordinator.(\w+)<type=(.+), name=(.+)><>Value
+  name: kafka_coordinator_$1_$2_$3
+  type: GAUGE
 
-  # Activity
-  # - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)><>OneMinuteRate
-  #   name: kafka_server_brokertopicmetrics_$1_rate
-  - pattern: kafka.server<type=BrokerTopicMetrics, name=(.+)?(, topic=(.+))><>OneMinuteRate
-    name: kafka_server_brokertopicmetrics_$1_rate
-    labels:
-      topic: $3
-  - pattern: kafka.network<type=RequestMetrics,name=RequestsPerSec,request=(.+),version=(.+)><>OneMinuteRate
-    name: kafka_network_requestmetrics_requestspersec_request_$1_rate
-    labels:
-      version: $2
+# Generic per-second counters with 0-2 key/value pairs
+- pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+), (.+)=(.+)><>Count
+  name: kafka_$1_$2_$3_total
+  type: COUNTER
+  labels:
+    "$4": "$5"
+    "$6": "$7"
+- pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*, (.+)=(.+)><>Count
+  name: kafka_$1_$2_$3_total
+  type: COUNTER
+  labels:
+    "$4": "$5"
+- pattern: kafka.(\w+)<type=(.+), name=(.+)PerSec\w*><>Count
+  name: kafka_$1_$2_$3_total
+  type: COUNTER
+
+# Generic gauges with 0-2 key/value pairs
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Value
+  name: kafka_$1_$2_$3
+  type: GAUGE
+  labels:
+    "$4": "$5"
+    "$6": "$7"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Value
+  name: kafka_$1_$2_$3
+  type: GAUGE
+  labels:
+    "$4": "$5"
+- pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+  name: kafka_$1_$2_$3
+  type: GAUGE
+
+# Emulate Prometheus 'Summary' metrics for the exported 'Histogram's.
+#
+# Note that these are missing the '_sum' metric!
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+), (.+)=(.+)><>Count
+  name: kafka_$1_$2_$3_count
+  type: COUNTER
+  labels:
+    "$4": "$5"
+    "$6": "$7"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*), (.+)=(.+)><>(\d+)thPercentile
+  name: kafka_$1_$2_$3
+  type: GAUGE
+  labels:
+    "$4": "$5"
+    "$6": "$7"
+    quantile: "0.$8"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Count
+  name: kafka_$1_$2_$3_count
+  type: COUNTER
+  labels:
+    "$4": "$5"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>Value
+  name: kafka_$1_$2_$3_value
+  type: GAUGE
+  labels:
+    "$4": "$5"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.+)><>OneMinuteRate
+  name: kafka_$1_$2_$3_rate
+  type: GAUGE
+  labels:
+    "$4": "$5"
+- pattern: kafka.(\w+)<type=(.+), name=(.+), (.+)=(.*)><>(\d+)thPercentile
+  name: kafka_$1_$2_$3
+  type: GAUGE
+  labels:
+    "$4": "$5"
+    quantile: "0.$6"
+- pattern: kafka.(\w+)<type=(.+), name=(.+)><>Count
+  name: kafka_$1_$2_$3_count
+  type: COUNTER
+- pattern: kafka.(\w+)<type=(.+), name=(.+)><>Value
+  name: kafka_$1_$2_$3_value
+  type: GAUGE
+- pattern: kafka.(\w+)<type=(.+), name=(.+)><>OneMinuteRate
+  name: kafka_$1_$2_$3_rate
+  type: GAUGE
+- pattern: kafka.(\w+)<type=(.+), name=(.+)><>(\d+)thPercentile
+  name: kafka_$1_$2_$3
+  type: GAUGE
+  labels:
+    quantile: "0.$4"

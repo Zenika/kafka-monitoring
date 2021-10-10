@@ -97,7 +97,7 @@ services:
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM___sha___512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
-      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
       - KAFKA_DELETE_TOPIC_ENABLE=true
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
@@ -141,7 +141,7 @@ services:
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM___sha___512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
-      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
       - KAFKA_DELETE_TOPIC_ENABLE=true
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
@@ -182,7 +182,7 @@ services:
       - KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL=SCRAM-SHA-512
       - KAFKA_INTER_BROKER_LISTENER_NAME=SECURE
       - "KAFKA_LISTENER_NAME_SECURE_SCRAM___sha___512_sasl_jaas_config=org.apache.kafka.common.security.scram.ScramLoginModule required username=admin password=admin-secret;"
-      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=false
       - KAFKA_DELETE_TOPIC_ENABLE=true
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR=1
